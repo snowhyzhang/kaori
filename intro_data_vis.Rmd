@@ -12,11 +12,20 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 ```{r initial}
 library(ggplot2)
 library(ggmap)
+library(dplyr)
 
 # 读取数据
-players <- read.csv("data/nba_players.csv", stringsAsFactors = FALSE)
+players <- read.csv("data/nba_players.csv", stringsAsFactors = FALSE) %>% 
+  mutate(
+    position = factor(position)
+  )
+
 teams <- read.csv("data/nba_team.csv", stringsAsFactors = FALSE)
-currey_performance <- read.csv("data/nba_curry_performance.csv", stringsAsFactors = FALSE)
+
+currey_performance <- read.csv("data/nba_curry_performance.csv", stringsAsFactors = FALSE) %>% 
+  mutate(
+    game_date = as.Date(game_date)
+  )
 
 my_ggplot_theme <- theme(text = element_text(family = "STKaiti"), # 使用楷体字体显示中文
                          plot.title = element_text(hjust = 0.5)   # 标题居中
@@ -89,21 +98,206 @@ knitr::kable(
 #### 单变量情况
 
 1. 变量类型为离散型: 条形图、饼图等  
-例如每个位置上球员的数量
+每个位置上球员分布
 
 ```{r bar_chart, out.width=600}
-ggplot(players, aes(x = factor(position))) + 
-  geom_bar(fill = "steelblue") + 
-  labs(x = "球员位置", y = "数量", title = "条形图 —— 各个位置上球员数量") + 
+ggplot(players, aes(x = position)) + 
+  geom_bar() + 
+  labs(x = "球员位置", y = "数量", title = "条形图 —— 各个位置上球员分布") + 
   my_ggplot_theme
 ```
 
 2. 变量为连续性: 频率图、直方图、密度图等  
-例如得分的频率分布
+得分的频率分布
+
 ```{r freq_chart, out.width=600}
 ggplot(players, aes(x = avg_pts)) + 
   geom_freqpoly() + 
   labs(x = "得分", y = "数量", title = "频率图 —— 球员得分分布") + 
   my_ggplot_theme
+```
+
+#### 双变量情况
+
+1. 两个变量都是连续性: 散点图等  
+例如得分与助攻的分布
+
+```{r point_chart, out.width=600}
+ggplot(players, aes(x = avg_pts, y = avg_ast)) + 
+  geom_point() + 
+  labs(x = "得分", y = "助攻", title = "散点图 —— 得分与助攻") + 
+  my_ggplot_theme
+```
+
+2. 两个变量都是离散型的: 气泡图等  
+
+例如每个球队在每个位置上的人员分布  
+
+2.1 以点的大小来展示  
+
+```{r bubble_size_chart, out.width=600}
+ggplot(players, aes(x = team_name, y = position)) + 
+  geom_count() +
+  labs(x = "球队", y = "位置", 
+       title = "气泡图（大小） —— 每个球队在每个位置上的人员分布") + 
+  my_ggplot_theme + 
+  # 调整x周的标签位置，防止队名重叠
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+
+2.2 以点的颜色来展示  
+
+```{r bubble_color_chart, out.width=600}
+# 每个位置上的球员数量进行统计
+team_position_count <- players %>% 
+  count(team_name, position)
+
+ggplot(team_position_count, aes(x = team_name, y = position)) + 
+  geom_point(aes(color = n), size = 4.5) + 
+  labs(x = "球队", y = "位置", 
+       title = "气泡图（颜色） —— 每个球队在每个位置上的人员分布") + 
+  # 调整渐变色
+  scale_color_gradient(low = "green", high = "red", name = "数量") + 
+  my_ggplot_theme + 
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+
+3. 一个变量为连续型，一个变量为离散型: 条形图、箱形图、小提琴图等  
+
+3.1 条形图  
+
+例如金州勇士队的球员得分  
+
+```{r bar2_chart, out.width=600}
+gs_player <- filter(players, team_name == "勇士")
+
+# 使用reorder从高到底排列
+ggplot(gs_player, aes(x = reorder(player_name, -avg_pts), y = avg_pts)) + 
+  geom_bar(stat = "identity") + 
+  labs(x = "球员", y = "得分", title = "条形图2 —— 勇士队得分分布") + 
+  my_ggplot_theme + 
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+
+3.2 箱形图  
+
+各支球队的得分分布  
+
+```{r boxplot_chart, out.width=600}
+ggplot(players, aes(x = team_name, y = avg_pts)) + 
+  geom_boxplot() + 
+  labs(x = "球队", y = "得分", title = "箱形图 —— 各支球队的得分分布") + 
+  my_ggplot_theme + 
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+
+4. 一个变量为日期类型，一个变量为连续型: 折线图、面积图等
+
+库里每场比赛得分情况
+
+```{r line_chart, out.width=600}
+ggplot(currey_performance, aes(x = game_date, y = pts)) + 
+  geom_line() + 
+  labs(x = "日期", y = "得分", title = "折线图 —— 库里每场比赛得分") + 
+  my_ggplot_theme
+```
+
+#### 多个变量的情况
+
+1. 使用大小、颜色、形状等  
+
+我们在一张图上展示勇士队球员得分、助攻、位置与上场时间  
+
+```{r point_color_size_chart, out.width=600}
+ggplot(gs_player, aes(x = avg_pts, y = avg_ast)) + 
+  geom_point(aes(shape = position, color = avg_play_time), size = 3) + 
+  labs(x = "得分", y = "助攻", title = "得分、助攻、位置与上场时间") + 
+  my_ggplot_theme + 
+  scale_color_gradient(high = "red", low = "green", name = "上场时间") +
+  scale_shape_manual(name = "球员位置", values = 1:nlevels(factor(gs_player$position)))
+```
+
+2. 分组比较  
+
+将数据分组进行比较是很常用数据的可视化方式，例如可以数据按照球队、球员位置等分组，进行比较   
+
+我们分别比较勇士、火箭和骑士队的平均得分、助攻、前场篮板、后场篮板、抢断与盖帽数据
+
+```{r group_chart}
+player_group <- players %>% 
+  filter(team_name %in% c("勇士", "骑士", "火箭")) %>% 
+  group_by(team_name) %>% 
+  summarise_at(
+    vars(avg_pts:avg_blk),
+    funs(
+      round(mean(.), 2)
+    )
+  ) %>% 
+  # 转换为长数据
+  tidyr::gather("item", "value", -team_name) %>% 
+  # 转换为适当的名称
+  mutate(
+    item = case_when(item == "avg_pts" ~ "得分",
+                     item == "avg_ast" ~ "助攻",
+                     item == "avg_oreb" ~ "前场篮板",
+                     item == "avg_dreb" ~ "后场篮板",
+                     item == "avg_stl" ~ "抢断",
+                     item == "avg_blk" ~ "盖帽"
+    ),
+    # 重新排序数据项
+    item = factor(item, levels = c("得分", "助攻", "前场篮板", "后场篮板", "抢断", "盖帽"))
+  )
+
+ggplot(player_group, aes(x = item, y = value)) + 
+  geom_bar(aes(fill = team_name), position = "dodge", stat = "identity") + 
+  labs(x = "数据项", y = "数据", title = "勇士、火箭和骑士队的数据比较") + 
+  scale_fill_discrete(name = "队伍") + 
+  my_ggplot_theme
+```
+
+3. 分面  
+
+分面按照某个变量进行分组后，分别画出若干图形  
+
+3.1 我们观察每个球队的得分、助攻、前场篮板和后场篮板分布情况  
+
+```{r facet_chart}
+team_data <- players %>% 
+  group_by(team_name) %>% 
+  summarise_at(
+    vars(avg_pts:avg_dreb),
+    funs(
+      round(mean(.), 2)
+    )
+  ) %>% 
+  tidyr::gather("item", "value", -team_name) %>% 
+  mutate(
+    item = case_when(item == "avg_pts" ~ "得分",
+                     item == "avg_ast" ~ "助攻",
+                     item == "avg_oreb" ~ "前场篮板",
+                     item == "avg_dreb" ~ "后场篮板"
+    ),
+    item = factor(item, levels = c("得分", "助攻", "前场篮板", "后场篮板"))
+  )
+  
+ggplot(team_data, aes(x = item, y = value)) +
+  geom_bar(stat = "identity") + 
+  facet_wrap(~ team_name) + 
+  labs(x = "数据项", y = "数据", title = "各球队的数据分布") + 
+  scale_y_continuous(breaks = c(0, 5, 10)) + 
+  my_ggplot_theme + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  
+```
+
+3.2 我们比较每个球队的得分、助攻、前场篮板和后场篮板的情况  
+
+```{r facet2_chart}
+ggplot(team_data, aes(x = team_name, y = value)) +
+  geom_bar(stat = "identity") + 
+  facet_grid(item ~ ., scales = "free_y") + 
+  labs(x = "球队", y = "数据", title = "各球队的数据比较") + 
+  my_ggplot_theme + 
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
 ```
 

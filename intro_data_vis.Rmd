@@ -1,0 +1,109 @@
+---
+title: "数据可视化基本图形"
+author: "snowhyzhang"
+date: "2017年7月23日"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r initial}
+library(ggplot2)
+library(ggmap)
+
+# 读取数据
+players <- read.csv("data/nba_players.csv", stringsAsFactors = FALSE)
+teams <- read.csv("data/nba_team.csv", stringsAsFactors = FALSE)
+currey_performance <- read.csv("data/nba_curry_performance.csv", stringsAsFactors = FALSE)
+
+my_ggplot_theme <- theme(text = element_text(family = "STKaiti"), # 使用楷体字体显示中文
+                         plot.title = element_text(hjust = 0.5)   # 标题居中
+                         )
+```
+
+
+数据可视化有许多不同的方式，本文主要通过依据不同的数据变量类型，介绍一些数据可视化的方法。我们将采用NBA的数据，具体数据可以在数据样例中看到。
+
+### 数据样例
+
+我们先来看一下我们将会使用到样例数据。
+
+1. 球员数据  
+
+<div style = "width: 90%; margin:0 auto; overflow:scroll">
+
+```{r player_data}
+knitr::kable(
+  head(players), booktabs = TRUE
+)
+```
+
+</div>
+
+其中，avg_pts到avg_play_time分别表示球员的平均得分、助攻、前场篮板、后场篮板、抢断、盖帽、失误、命中球数、出手次数、三分命中数、上场时间。position表示球员在场上位置，1.5表示该球员可以作为1号位或者2号位，一次类推。  
+
+</br>
+
+2. 球队数据  
+
+<div style = "width: 60%;">
+
+```{r team_data}
+knitr::kable(
+  head(teams), booktabs = TRUE
+)
+```
+
+</div>
+
+lon和lat表示球队的经纬度，由于洛杉矶湖人与快船为一个城市，因此坐标稍作了一些修改。  
+
+</br>
+
+3. 斯蒂夫·库里比赛数据
+
+<div style = "width: 80%">
+
+```{r curry_data}
+knitr::kable(
+  head(currey_performance), booktabs = TRUE
+)
+```
+
+</div>
+
+</br>
+
+4. 数据类型  
+我们可以将数据大致分为两类:  
+
+- 离散型（分类）变量: 球员ID、球员名字、球队名称等  
+- 连续型（数值）变量: 得分、助攻、抢断等  
+
+我们接下来将会根据不同的变量类型来进行可视化。
+
+### 数据可视化基本图形
+
+#### 单变量情况
+
+1. 变量类型为离散型: 条形图、饼图等  
+例如每个位置上球员的数量
+
+```{r bar_chart, out.width=600}
+ggplot(players, aes(x = factor(position))) + 
+  geom_bar(fill = "steelblue") + 
+  labs(x = "球员位置", y = "数量", title = "条形图 —— 各个位置上球员数量") + 
+  my_ggplot_theme
+```
+
+2. 变量为连续性: 频率图、直方图、密度图等  
+例如得分的频率分布
+```{r freq_chart, out.width=600}
+ggplot(players, aes(x = avg_pts)) + 
+  geom_freqpoly() + 
+  labs(x = "得分", y = "数量", title = "频率图 —— 球员得分分布") + 
+  my_ggplot_theme
+```
+

@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 library(ggplot2)
 library(ggmap)
 library(dplyr)
+library(tidyr)
 
 # 读取数据
 players <- read.csv("data/nba_players.csv", stringsAsFactors = FALSE) %>% 
@@ -41,7 +42,7 @@ my_ggplot_theme <- theme(text = element_text(family = "STKaiti"), # 使用楷体
 
 1. 球员数据  
 
-<div style = "width: 90%; margin:0 auto; overflow:scroll">
+<div style = "width: 90%; overflow:scroll">
 
 ```{r player_data}
 knitr::kable(
@@ -51,7 +52,7 @@ knitr::kable(
 
 </div>
 
-其中，avg_pts到avg_play_time分别表示球员的平均得分、助攻、前场篮板、后场篮板、抢断、盖帽、失误、命中球数、出手次数、三分命中数、上场时间。position表示球员在场上位置，1.5表示该球员可以作为1号位或者2号位，一次类推。  
+其中，avg_pts到avg_play_time分别表示球员的平均得分、助攻、前场篮板、后场篮板、抢断、盖帽、失误、命中球数、出手次数、三分命中数、上场时间；position表示球员在场上位置，1.5表示该球员可以作为1号位或者2号位。  
 
 </br>
 
@@ -71,7 +72,7 @@ lon和lat表示球队的经纬度，由于洛杉矶湖人与快船为一个城�
 
 </br>
 
-3. 斯蒂夫·库里比赛数据
+3. 斯蒂芬·库里比赛数据
 
 <div style = "width: 80%">
 
@@ -223,7 +224,7 @@ ggplot(gs_player, aes(x = avg_pts, y = avg_ast)) +
 
 我们分别比较勇士、火箭和骑士队的平均得分、助攻、前场篮板、后场篮板、抢断与盖帽数据
 
-```{r group_chart}
+```{r group_chart, out.width=600}
 player_group <- players %>% 
   filter(team_name %in% c("勇士", "骑士", "火箭")) %>% 
   group_by(team_name) %>% 
@@ -299,5 +300,172 @@ ggplot(team_data, aes(x = team_name, y = value)) +
   labs(x = "球队", y = "数据", title = "各球队的数据比较") + 
   my_ggplot_theme + 
   theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+
+### 增加可读性
+
+通过增加新元素、对坐标轴、图形、数据进行变换等方式，增加可读性
+
+#### 对感兴趣的点增加标签
+
+```{r label_chart, out.width=600}
+label_player <- players %>% 
+  filter(player_name %in% c("斯蒂芬-库里", "勒布朗-詹姆斯", "凯文-杜兰特", "詹姆斯-哈登"))
+
+ggplot(players, aes(x = avg_pts, y = avg_ast)) + 
+  geom_point() + 
+  labs(x = "得分", y = "助攻", title = "增加标签") + 
+  geom_point(data = label_player, aes(x = avg_pts, y = avg_ast), 
+             size = 3, shape = 1, color = "red") + 
+  ggrepel::geom_label_repel(data = label_player, aes(x = avg_pts, y = avg_ast, label = player_name),
+                            family = "STKaiti") + 
+  my_ggplot_theme
+  
+```
+
+#### 增加背景
+
+我们增加地图背景来展示每个球队的得分情况  
+
+```{r}
+range_lon <- range(teams$lon)
+range_lat <- range(teams$lat)
+
+# 调用ggmap接口下来地图数据
+# us_map_range <- c(left = range_lon[1] - 5, right = range_lon[2] + 5, 
+#                   bottom = range_lat[1] - 5, top = range_lat[2] + 5)
+# us_map <- get_stamenmap(us_map_range, zoom = 5, maptype = "toner-lite")
+# 保存地图信息
+# save(us_map, file = "us_map.RData")
+
+load("data/us_map.RData")
+
+team_avg_pts <- players %>% 
+  group_by(team_name) %>% 
+  summarise(
+    avg_pts = round(mean(avg_pts), 2)
+  ) %>% 
+  left_join(teams, by = "team_name")
+
+ggmap(us_map) + 
+  geom_point(data = team_avg_pts, aes(x = lon, y = lat, color = avg_pts), size = 6) + 
+  ggrepel::geom_label_repel(data = team_avg_pts, 
+                            aes(x = lon, y = lat, label = paste0(team_name, ":", avg_pts)),
+                            family = "STKaiti") + 
+  scale_color_gradient(high = "red", low = "green", name = "平均球员得分") + 
+  ggtitle("各球队平均球员得分") + 
+  my_ggplot_theme + 
+  theme(axis.line=element_blank(),
+      axis.text.x=element_blank(),
+      axis.text.y=element_blank(),
+      axis.ticks=element_blank(),
+      axis.title.x=element_blank(),
+      axis.title.y=element_blank(),
+      panel.background=element_blank(),
+      panel.border=element_blank(),
+      panel.grid.major=element_blank(),
+      panel.grid.minor=element_blank(),
+      plot.background=element_blank())
+```
+
+#### 增加辅助线
+
+查看上场时间与得分关系时，可以添加一条回归线，使得关系更为清晰
+
+```{r auxiliary_line_chart}
+fit_lm <- lm(avg_pts ~ avg_play_time, data = players)
+lm_formula <- paste0("points = ", round(coef(fit_lm)[1], 1), " + ",
+                     round(coef(fit_lm)[2], 1), " * play_time")
+
+ggplot(players, aes(x = avg_play_time, y = avg_pts)) + 
+  geom_point(alpha = 0.8) + 
+  geom_smooth(method = "lm", se = FALSE, color = "blue") + 
+  geom_text(aes(x = 27, y = 12, label = lm_formula), hjust = 0, color = "blue") +
+  labs(x = "上场时间", y = "得分", title = "上场时间与得分关系") + 
+  my_ggplot_theme
+```
+
+#### 坐标轴转换
+
+我们通过旋转x轴，用雷达图展示库里和杜兰特的部分数据的比较
+
+```{r radar_chart}
+players_cd <- players %>% 
+  select(player_name, avg_pts:avg_blk) %>% 
+  mutate_at(
+    vars(-player_name),
+    funs(
+      as.numeric(scales::rescale(.))
+    )
+  ) %>% 
+  filter(player_name %in% c("斯蒂芬-库里", "凯文-杜兰特"))
+
+names(players_cd) <- c("球员", "得分", "助攻", "进攻篮板", "防守篮板", "抢断", "盖帽")
+
+ggradar::ggradar(players_cd, font.radar = "STKaiti", axis.label.size = 3)
+```
+
+#### 图形位置变换
+
+通过条形图的位置变化，以漏斗图来展示勇士队球员的平均得分  
+
+```{r fuel_chart}
+fuel_gs_player <- data.frame(player_name = gs_player$player_name,
+                             label = paste0(gs_player$player_name, ":", gs_player$avg_pts),
+                             help_bar = (max(gs_player$avg_pts) -  gs_player$avg_pts) / 2,
+                             avg_pts = gs_player$avg_pts)
+
+fuel_gs_player$player_name <- reorder(fuel_gs_player$player_name, -fuel_gs_player$avg_pts)
+
+fuel_gs_player_tmp <- fuel_gs_player %>% 
+  gather(perform, avg_pts, help_bar, avg_pts) %>% 
+  mutate(
+    perform = factor(perform, level = c("avg_pts", "help_bar"), order = TRUE)
+  )
+  
+ggplot() +
+  geom_bar(data = fuel_gs_player_tmp, aes(x = as.integer(player_name), y = avg_pts, fill = perform),
+           stat = "identity", position = "stack") + 
+  scale_fill_manual(values = c("steelblue", "white")) + 
+  geom_text(data = fuel_gs_player, aes(x = as.integer(player_name), y = help_bar + avg_pts / 2 - 0.05, label = label), 
+            col = "black", size = 3, family = "STKaiti") + 
+  ggtitle("勇士球员得分") + 
+  my_ggplot_theme + guides(fill = "none") + 
+  theme(axis.line=element_blank(),
+      axis.text.x=element_blank(),
+      axis.text.y=element_blank(),
+      axis.ticks=element_blank(),
+      axis.title.x=element_blank(),
+      axis.title.y=element_blank(),
+      panel.background=element_blank(),
+      panel.border=element_blank(),
+      panel.grid.major=element_blank(),
+      panel.grid.minor=element_blank(),
+      plot.background=element_blank()) + 
+  coord_flip() + scale_x_reverse()
+```
+
+#### 数据变换
+
+上场时间与得分存在较为明显的非线性关系，我们可以对得分进行对数变换，使得线性更为明显。
+
+```{r log_transform_chart}
+log_pts_data <- players %>% 
+  select(avg_pts, avg_play_time) %>% 
+  filter(avg_pts > 0) %>% 
+  mutate(
+    log_avg_pts = log(avg_pts)
+  )
+
+fit_log_lm <- lm(log_avg_pts ~ avg_play_time, data = log_pts_data)
+log_lm_formula <- paste0("log(points) = ", round(coef(fit_log_lm)[1], 1), " + ",
+                         round(coef(fit_log_lm)[2], 1), " * play_time")
+
+ggplot(log_pts_data, aes(x = avg_play_time, y = log_avg_pts)) + 
+  geom_point(alpha = 0.8) + 
+  geom_smooth(method = "lm", se = FALSE, color = "blue") + 
+  geom_text(aes(x = 35, y = 3.5, label = log_lm_formula), hjust = 1, color = "blue") +
+  labs(x = "上场时间", y = "对数变换后的得分", title = "上场时间与得分关系") + 
+  my_ggplot_theme
 ```
 

@@ -1,9 +1,14 @@
 ---
-title: "数据可视化基本图形"
+title: "基于ggplot的数据可视化基本方法"
 author: "snowhyzhang"
-date: "2017年7月23日"
+date: "2017年7月26日"
 output: html_document
 ---
+
+### 前言
+
+本文通过依据不同的数据变量类型，基于ggplot的实现来介绍一些数据可视化基本方法和一些常用的增加可读性的方式。  
+代码与数据可以在[github](https://github.com/snowhyzhang/kaori/blob/master/intro_data_vis.Rmd)上找到。  
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
@@ -11,7 +16,6 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 
 ```{r initial}
 library(ggplot2)
-library(ggmap)
 library(dplyr)
 library(tidyr)
 
@@ -34,11 +38,10 @@ my_ggplot_theme <- theme(text = element_text(family = "STKaiti"), # 使用楷体
 ```
 
 
-数据可视化有许多不同的方式，本文主要通过依据不同的数据变量类型，介绍一些数据可视化的方法。我们将采用NBA的数据，具体数据可以在数据样例中看到。
-
 ### 数据样例
 
-我们先来看一下我们将会使用到样例数据。
+我们会使用NBA 2016-2017赛季常规赛的球员数据作为可视化的样例数据。  
+首先，来看一下我们将会使用到样例数据。  
 
 1. 球员数据  
 
@@ -52,7 +55,7 @@ knitr::kable(
 
 </div>
 
-其中，avg_pts到avg_play_time分别表示球员的平均得分、助攻、前场篮板、后场篮板、抢断、盖帽、失误、命中球数、出手次数、三分命中数、上场时间；position表示球员在场上位置，1.5表示该球员可以作为1号位或者2号位。  
+其中，avg_pts到avg_play_time分别表示球员的平均得分、助攻、前场篮板、后场篮板、抢断、盖帽、失误、命中球数、出手次数、三分命中数、上场时间；position表示球员在场上位置，1.5表示该球员可以打1号位或者2号位。  
 
 </br>
 
@@ -84,15 +87,17 @@ knitr::kable(
 
 </div>
 
+斯蒂芬·库里每场比赛的数据。
+
 </br>
 
 4. 数据类型  
-我们可以将数据大致分为两类:  
+我们可以将数据分为两类:  
 
 - 离散型（分类）变量: 球员ID、球员名字、球队名称等  
 - 连续型（数值）变量: 得分、助攻、抢断等  
 
-我们接下来将会根据不同的变量类型来进行可视化。
+我们接下来将会根据不同的变量类型来进行数据可视化。  
 
 ### 数据可视化基本图形
 
@@ -109,7 +114,7 @@ ggplot(players, aes(x = position)) +
 ```
 
 2. 变量为连续性: 频率图、直方图、密度图等  
-得分的频率分布
+球员得分的频率分布
 
 ```{r freq_chart, out.width=600}
 ggplot(players, aes(x = avg_pts)) + 
@@ -121,7 +126,7 @@ ggplot(players, aes(x = avg_pts)) +
 #### 双变量情况
 
 1. 两个变量都是连续性: 散点图等  
-例如得分与助攻的分布
+球员得分与助攻的分布
 
 ```{r point_chart, out.width=600}
 ggplot(players, aes(x = avg_pts, y = avg_ast)) + 
@@ -132,7 +137,7 @@ ggplot(players, aes(x = avg_pts, y = avg_ast)) +
 
 2. 两个变量都是离散型的: 气泡图等  
 
-例如每个球队在每个位置上的人员分布  
+每个球队在每个位置上的人员分布情况  
 
 2.1 以点的大小来展示  
 
@@ -167,7 +172,7 @@ ggplot(team_position_count, aes(x = team_name, y = position)) +
 
 3.1 条形图  
 
-例如金州勇士队的球员得分  
+展示金州勇士队的球员场均得分qin©˚uan©  
 
 ```{r bar2_chart, out.width=600}
 gs_player <- filter(players, team_name == "勇士")
@@ -175,26 +180,26 @@ gs_player <- filter(players, team_name == "勇士")
 # 使用reorder从高到底排列
 ggplot(gs_player, aes(x = reorder(player_name, -avg_pts), y = avg_pts)) + 
   geom_bar(stat = "identity") + 
-  labs(x = "球员", y = "得分", title = "条形图2 —— 勇士队得分分布") + 
+  labs(x = "球员", y = "得分", title = "条形图2 —— 勇士队球员场均得分") + 
   my_ggplot_theme + 
   theme(axis.text.x = element_text(angle = 60, hjust = 1))
 ```
 
 3.2 箱形图  
 
-各支球队的得分分布  
+各支球队的球员场均得分分布情况  
 
 ```{r boxplot_chart, out.width=600}
 ggplot(players, aes(x = team_name, y = avg_pts)) + 
   geom_boxplot() + 
-  labs(x = "球队", y = "得分", title = "箱形图 —— 各支球队的得分分布") + 
+  labs(x = "球队", y = "得分", title = "箱形图 —— 各支球队的球员场均得分分布") + 
   my_ggplot_theme + 
   theme(axis.text.x = element_text(angle = 60, hjust = 1))
 ```
 
-4. 一个变量为日期类型，一个变量为连续型: 折线图、面积图等
+4. 一个变量为日期类型，一个变量为连续型: 折线图、面积图等  
 
-库里每场比赛得分情况
+库里每场比赛得分情况  
 
 ```{r line_chart, out.width=600}
 ggplot(currey_performance, aes(x = game_date, y = pts)) + 
@@ -205,9 +210,9 @@ ggplot(currey_performance, aes(x = game_date, y = pts)) +
 
 #### 多个变量的情况
 
-1. 使用大小、颜色、形状等  
+1. 使用大小、颜色、形状等来展示不同的维度  
 
-我们在一张图上展示勇士队球员得分、助攻、位置与上场时间  
+在散点图上展示勇士队球员得分和助攻，用形状来表示位置，颜色来表示上场时间  
 
 ```{r point_color_size_chart, out.width=600}
 ggplot(gs_player, aes(x = avg_pts, y = avg_ast)) + 
@@ -222,7 +227,7 @@ ggplot(gs_player, aes(x = avg_pts, y = avg_ast)) +
 
 将数据分组进行比较是很常用数据的可视化方式，例如可以数据按照球队、球员位置等分组，进行比较   
 
-我们分别比较勇士、火箭和骑士队的平均得分、助攻、前场篮板、后场篮板、抢断与盖帽数据
+分别比较勇士、火箭和骑士队的平均得分、助攻、前场篮板、后场篮板、抢断与盖帽数据
 
 ```{r group_chart, out.width=600}
 player_group <- players %>% 
@@ -308,6 +313,8 @@ ggplot(team_data, aes(x = team_name, y = value)) +
 
 #### 对感兴趣的点增加标签
 
+在得分与助攻散点图上，标出斯蒂芬·库里, 勒布朗·詹姆斯, 凯文·杜兰特和詹姆斯·哈登
+
 ```{r label_chart, out.width=600}
 label_player <- players %>% 
   filter(player_name %in% c("斯蒂芬-库里", "勒布朗-詹姆斯", "凯文-杜兰特", "詹姆斯-哈登"))
@@ -325,9 +332,11 @@ ggplot(players, aes(x = avg_pts, y = avg_ast)) +
 
 #### 增加背景
 
-我们增加地图背景来展示每个球队的得分情况  
+我们增加地图背景来展示每个球队的平均球员得分情况  
 
-```{r}
+```{r map_chart}
+library(ggmap)
+
 range_lon <- range(teams$lon)
 range_lat <- range(teams$lat)
 
@@ -468,4 +477,21 @@ ggplot(log_pts_data, aes(x = avg_play_time, y = log_avg_pts)) +
   labs(x = "上场时间", y = "对数变换后的得分", title = "上场时间与得分关系") + 
   my_ggplot_theme
 ```
+
+#### 增加主题风格
+
+利用ggthemr包中的主题，我们可以对上图增加“dust”主题风格
+
+```{r theme_dust_chart}
+ggplot(log_pts_data, aes(x = avg_play_time, y = log_avg_pts)) + 
+  geom_point(alpha = 0.8) + 
+  geom_smooth(method = "lm", se = FALSE, color = "blue") + 
+  geom_text(aes(x = 35, y = 3.5, label = log_lm_formula), hjust = 1, color = "blue") +
+  labs(x = "上场时间", y = "对数变换后的得分", title = "上场时间与得分关系") + 
+  ggthemr::ggthemr("dust", layout = "scientific", type = 'outer')$theme + 
+  theme(text = element_text(family = "STKaiti"))
+```
+
+
+增加图形可读性的方式还有许多，本文只列举了非常小的一分部作为参考。  
 

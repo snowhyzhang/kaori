@@ -1,7 +1,7 @@
 ---
 title: "基于ggplot的数据可视化基本方法"
 author: "snowhyzhang"
-date: "2017年7月26日"
+date: "2017年7月25日"
 output: html_document
 ---
 
@@ -172,7 +172,7 @@ ggplot(team_position_count, aes(x = team_name, y = position)) +
 
 3.1 条形图  
 
-展示金州勇士队的球员场均得分qin©˚uan©  
+展示金州勇士队的球员场均得分  
 
 ```{r bar2_chart, out.width=600}
 gs_player <- filter(players, team_name == "勇士")

@@ -420,8 +420,6 @@ names(players_cd) <- c("球员", "得分", "助攻", "进攻篮板", "防守篮�
 
 ggradar(players_cd, font.radar = "STKaiti", axis.label.size = 3)
 ```
-ggradar(players_cd, font.radar = "STKaiti", axis.label.size = 3)
-```
 
 #### 图形位置变换
 

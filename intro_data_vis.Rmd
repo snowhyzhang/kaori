@@ -1,7 +1,7 @@
 ---
 title: "基于ggplot的数据可视化基本方法"
 author: "snowhyzhang"
-date: "2017年7月26日"
+date: "2017-10-05"
 output: html_document
 ---
 
@@ -32,9 +32,13 @@ currey_performance <- read.csv("data/nba_curry_performance.csv", stringsAsFactor
     game_date = as.Date(game_date)
   )
 
-my_ggplot_theme <- theme(text = element_text(family = "STKaiti"), # 使用楷体字体显示中文
-                         plot.title = element_text(hjust = 0.5)   # 标题居中
-                         )
+# 设置基础的主题
+my_ggplot_theme <- theme(
+  # MAC系统上使用楷体字体显示中文，windows可以使用默认的中文字体
+  text = element_text(family = "STKaiti"), 
+  # 标题居中
+  plot.title = element_text(hjust = 0.5)
+)
 ```
 
 
@@ -172,7 +176,7 @@ ggplot(team_position_count, aes(x = team_name, y = position)) +
 
 3.1 条形图  
 
-展示金州勇士队的球员场均得分qin©˚uan©  
+展示金州勇士队的球员场均得分  
 
 ```{r bar2_chart, out.width=600}
 gs_player <- filter(players, team_name == "勇士")
@@ -340,6 +344,7 @@ library(ggmap)
 range_lon <- range(teams$lon)
 range_lat <- range(teams$lat)
 
+# 由于读取地图数据较慢，因此这里我们将已经读取好的地图数据保存好，使用是读取这些地图信息
 # 调用ggmap接口下来地图数据
 # us_map_range <- c(left = range_lon[1] - 5, right = range_lon[2] + 5, 
 #                   bottom = range_lat[1] - 5, top = range_lat[2] + 5)
@@ -399,6 +404,8 @@ ggplot(players, aes(x = avg_play_time, y = avg_pts)) +
 我们通过旋转x轴，用雷达图展示库里和杜兰特的部分数据的比较
 
 ```{r radar_chart}
+library(ggradar)
+
 players_cd <- players %>% 
   select(player_name, avg_pts:avg_blk) %>% 
   mutate_at(
@@ -411,7 +418,9 @@ players_cd <- players %>%
 
 names(players_cd) <- c("球员", "得分", "助攻", "进攻篮板", "防守篮板", "抢断", "盖帽")
 
-ggradar::ggradar(players_cd, font.radar = "STKaiti", axis.label.size = 3)
+ggradar(players_cd, font.radar = "STKaiti", axis.label.size = 3)
+```
+ggradar(players_cd, font.radar = "STKaiti", axis.label.size = 3)
 ```
 
 #### 图形位置变换
@@ -494,4 +503,3 @@ ggplot(log_pts_data, aes(x = avg_play_time, y = log_avg_pts)) +
 
 
 增加图形可读性的方式还有许多，本文只列举了非常小的一分部作为参考。  
-
